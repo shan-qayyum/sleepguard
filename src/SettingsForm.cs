@@ -23,6 +23,7 @@ namespace SleepGuard
         public SettingsForm()
         {
             Text = "SleepGuard " + Program.Version + " - Settings";
+            Icon = Icons.App;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = MinimizeBox = false;
             StartPosition = FormStartPosition.CenterScreen;
@@ -45,7 +46,7 @@ namespace SleepGuard
             Label lt = Text_("Lock Windows after");
             lt.Left = 16;
             Row(lt, Number(nTries, 1, 10, Settings.MaxWrongTries), Text_("wrong PINs (it then needs your Windows password)"));
-            Row(Check(cPrompt, "Show the PIN box when someone types", 16));
+            Row(Check(cPrompt, "Show the PIN box when someone types, clicks or scrolls", 16));
 
             Section("Sleep timer");
             Row(Check(cSleep, "Pause the video after", 16), Number(nSleep, 1, 480, Settings.SleepTimerMinutes),

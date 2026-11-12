@@ -51,8 +51,8 @@ namespace SleepGuard
 
             prompt.CreateControl();                  // a window handle to marshal hook events onto the UI thread
             IntPtr unused = prompt.Handle;
-            iconOn = MakeIcon(Color.FromArgb(220, 60, 50));
-            iconOff = MakeIcon(Color.FromArgb(110, 116, 125));
+            iconOn = Icons.Tray(true);
+            iconOff = Icons.Tray(false);
 
             var menu = new ContextMenuStrip();
             turnOnItem.Click += delegate { TurnOn("menu"); };
@@ -66,6 +66,7 @@ namespace SleepGuard
             tray.Visible = true;
 
             blocker.KeyPressed += OnKeyFromHook;
+            blocker.MousePressed += OnMouseFromHook;
             RegisterHotkey(true);
             SystemEvents.SessionSwitch += OnSessionSwitch;
             timer.Tick += delegate { Tick(); };
@@ -187,6 +188,20 @@ namespace SleepGuard
             catch (InvalidOperationException) { }
         }
 
+        // A blocked click or scroll: show the PIN box so it is clear why nothing happens.
+        void OnMouseFromHook()
+        {
+            if (!Guarding) return;
+            try { prompt.BeginInvoke(new Action(ShowPromptForMouse)); }
+            catch (InvalidOperationException) { }
+        }
+
+        void ShowPromptForMouse()
+        {
+            if (Guarding && Settings.ShowPrompt && !checking)
+                prompt.ShowState("Protected - type the PIN, then Enter  (Esc clears)", Color.FromArgb(232, 234, 237), typed.Length);
+        }
+
         void HandleKey(Keys key)
         {
             if (!Guarding) return;
@@ -280,24 +295,6 @@ namespace SleepGuard
             turnOnItem.Text = "Turn on now  (Ctrl+Alt+" + Settings.HotkeyLetter + ")";
         }
 
-        static Icon MakeIcon(Color fill)
-        {
-            using (var bmp = new Bitmap(16, 16))
-            {
-                using (Graphics g = Graphics.FromImage(bmp))
-                using (var brush = new SolidBrush(fill))
-                using (var font = new Font("Arial", 10f, FontStyle.Bold, GraphicsUnit.Pixel))
-                {
-                    g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-                    g.FillEllipse(brush, 0, 0, 15, 15);
-                    g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
-                    SizeF size = g.MeasureString("Z", font);
-                    g.DrawString("Z", font, Brushes.White, (16 - size.Width) / 2 + 0.5f, (16 - size.Height) / 2 + 0.5f);
-                }
-                return Icon.FromHandle(bmp.GetHicon());
-            }
-        }
-
         protected override void ExitThreadCore()
         {
             if (Guarding) return;                    // never exit while protecting (input is blocked anyway)
@@ -345,7 +342,7 @@ namespace SleepGuard
 
     static class Program
     {
-        public const string Version = "1.0.0";
+        public const string Version = "1.1.0";
 
         [STAThread]
         static void Main()

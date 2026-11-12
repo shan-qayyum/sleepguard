@@ -14,6 +14,7 @@ namespace SleepGuard
         public PinSetup(bool change)
         {
             Text = change ? "SleepGuard - change PIN" : "SleepGuard - choose a PIN";
+            Icon = Icons.App;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = MinimizeBox = false;
             StartPosition = FormStartPosition.CenterScreen;

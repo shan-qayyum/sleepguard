@@ -1,3 +1,5 @@
+<p align="center"><img src="assets/icon-256.png" width="128" alt="SleepGuard icon"></p>
+
 # SleepGuard
 
 **Fall asleep watching something without anyone else using your laptop.**
@@ -14,8 +16,8 @@ screen, no overlay.
    Or press **Ctrl+Alt+G** to turn it on right away.
 3. The video keeps playing. Clicks, scrolling, every key, Alt+Tab, the Windows key and Alt+F4 do nothing.
    The pointer still moves, but cannot click anything.
-4. When someone types, a small box asks for the PIN. It does not take focus from the video and disappears
-   after a few seconds.
+4. When someone types, clicks or scrolls, a small box asks for the PIN. It does not take focus from the video
+   and disappears after a few seconds.
 5. Type the PIN and press **Enter**: everything works again. If there were wrong attempts while it was on,
    you get a notification such as "2 wrong PIN attempts, last at 01:12".
 6. After 3 wrong PINs, **Windows itself locks**, so further guessing needs your Windows password.
@@ -24,7 +26,7 @@ screen, no overlay.
 turns off by itself when you unlock Windows.
 
 ## Settings
-Right-click the tray icon (a "Z" in a circle: grey = off, red = on) and choose **Settings and activity**.
+Right-click the tray icon (the moon: grey = off, in colour = on) and choose **Settings and activity**.
 
 | Setting | Default |
 |---|---|
@@ -32,7 +34,7 @@ Right-click the tray icon (a "Z" in a circle: grey = off, red = on) and choose *
 | ...but only while sound is playing, so it does not turn on when nothing is on | on |
 | Hotkey to turn on right away: Ctrl + Alt + a letter of your choice | G |
 | Lock Windows after N wrong PINs (1-10) | 3 |
-| Show the PIN box when someone types | on |
+| Show the PIN box when someone types, clicks or scrolls | on |
 | Sleep timer: pause the video after N minutes of protection, and optionally turn the screen off | off, 60 minutes |
 | Show a notification when protection turns on | off |
 | Start with Windows | off |
@@ -80,6 +82,8 @@ Uses the C# compiler that ships with Windows. Output: `bin\SleepGuard.exe`.
 | `src/Settings.cs` | Settings and the PIN hash |
 | `src/Activity.cs` | Activity log |
 | `src/Native.cs` | Idle time, Windows lock, media key, display off, sound meter |
+| `src/Icons.cs` | The app icon, drawn as vector art (also used for the tray) |
+| `assets/app.ico` | Multi-size icon (16-256 px) embedded in the .exe |
 
 ## Uninstall
 Tray icon → **Exit**, untick Start with Windows first if you ticked it, then delete the folder and

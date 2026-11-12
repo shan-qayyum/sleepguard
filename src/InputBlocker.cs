@@ -44,8 +44,9 @@ namespace SleepGuard
         Thread thread;
         uint threadId;
 
-        // Raised on the hook thread for every key press while blocking. Handlers must return quickly.
+        // Raised on the hook thread while blocking. Handlers must return quickly.
         public event Action<Keys> KeyPressed;
+        public event Action MousePressed;              // a click or scroll was blocked
 
         public bool Active { get { return thread != null; } }
 
@@ -124,8 +125,16 @@ namespace SleepGuard
 
         IntPtr OnMouse(int code, IntPtr wParam, IntPtr lParam)
         {
-            if (code >= 0 && wParam.ToInt32() != WM_MOUSEMOVE) return (IntPtr)1;   // swallow clicks and wheel
-            return CallNextHookEx(mouseHook, code, wParam, lParam);
+            if (code < 0) return CallNextHookEx(mouseHook, code, wParam, lParam);
+            int msg = wParam.ToInt32();
+            if (msg == WM_MOUSEMOVE) return CallNextHookEx(mouseHook, code, wParam, lParam);
+            // Button presses and wheel turns (not releases) tell the app someone is trying to use the laptop.
+            if (msg == 0x0201 || msg == 0x0204 || msg == 0x0207 || msg == 0x020B || msg == 0x020A || msg == 0x020E)
+            {
+                Action handler = MousePressed;
+                if (handler != null) handler();
+            }
+            return (IntPtr)1;                                // swallow clicks and wheel
         }
 
         public void Dispose() { Stop(); }
