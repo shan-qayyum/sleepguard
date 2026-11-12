@@ -39,7 +39,9 @@ namespace SleepGuard
 
         public bool Guarding { get; private set; }
 
-        public GuardApp()
+        readonly MainWindow window;
+
+        public GuardApp(bool startInTray)
         {
             Settings.Load();
             if (!Settings.HasPin)
@@ -47,6 +49,7 @@ namespace SleepGuard
                 using (var setup = new PinSetup(false))
                     if (setup.ShowDialog() != DialogResult.OK) { Environment.Exit(0); return; }
                 Activity.Add("PIN set up");
+                startInTray = false;                 // first run: show the app
             }
 
             prompt.CreateControl();                  // a window handle to marshal hook events onto the UI thread
@@ -54,14 +57,25 @@ namespace SleepGuard
             iconOn = Icons.Tray(true);
             iconOff = Icons.Tray(false);
 
+            window = new MainWindow(delegate { TurnOn("Protect now button"); }, ShowSettings, ChangePin, UpdateTray);
+            window.ClosedToTray += delegate
+            {
+                tray.ShowBalloonTip(4000, "SleepGuard is still running",
+                    "It keeps watching from the tray. Double-click the moon icon to open it again.", ToolTipIcon.Info);
+            };
+
             var menu = new ContextMenuStrip();
+            var openItem = new ToolStripMenuItem("Open SleepGuard", null, delegate { ShowMain(); });
+            openItem.Font = new Font(openItem.Font, FontStyle.Bold);
+            menu.Items.Add(openItem);
             turnOnItem.Click += delegate { TurnOn("menu"); };
             menu.Items.Add(turnOnItem);
             menu.Items.Add("Settings and activity...", null, delegate { ShowSettings(); });
             menu.Items.Add(new ToolStripSeparator());
             menu.Items.Add("Exit", null, delegate { ExitThread(); });
+            menu.Opening += delegate { openItem.Enabled = turnOnItem.Enabled = !Guarding; };
             tray.ContextMenuStrip = menu;
-            tray.DoubleClick += delegate { ShowSettings(); };
+            tray.MouseClick += delegate(object s, MouseEventArgs e) { if (e.Button == MouseButtons.Left) ShowMain(); };
             UpdateTray();
             tray.Visible = true;
 
@@ -71,7 +85,40 @@ namespace SleepGuard
             SystemEvents.SessionSwitch += OnSessionSwitch;
             timer.Tick += delegate { Tick(); };
             timer.Start();
+            StartShowListener();
             Activity.Add("SleepGuard started");
+            if (!startInTray) window.Show();
+        }
+
+        public void ShowMain()
+        {
+            if (Guarding) return;                    // nothing may be opened while protecting
+            window.RefreshAll(false);
+            window.ShowAndFocus();
+        }
+
+        void ChangePin()
+        {
+            if (Guarding) return;
+            using (var s = new PinSetup(true)) s.ShowDialog(window.Visible ? window : null);
+        }
+
+        // A second launch of SleepGuard signals this event (see Program.Main) to bring this copy's window up.
+        void StartShowListener()
+        {
+            EventWaitHandle ev = Program.ShowEvent;
+            if (ev == null) return;
+            var listener = new Thread(delegate()
+            {
+                while (true)
+                {
+                    ev.WaitOne();
+                    try { prompt.BeginInvoke(new Action(ShowMain)); }
+                    catch (InvalidOperationException) { return; }
+                }
+            });
+            listener.IsBackground = true;
+            listener.Start();
         }
 
         // ---------- decisions (static so they can be tested) ----------
@@ -158,6 +205,7 @@ namespace SleepGuard
             sleepTimerDone = false;
             onSinceTick = lastRefreshTick = Environment.TickCount;
             if (settingsOpen != null) settingsOpen.Close();
+            if (window.Visible) window.Hide();       // get out of the way of the video
             UpdateTray();
             Activity.Add("Protection ON (" + reason + ")");
             if (Settings.NotifyOnTurnOn)
@@ -176,8 +224,9 @@ namespace SleepGuard
             if (wrongWhileOn > 0)
                 tray.ShowBalloonTip(10000, "While you were away",
                     wrongWhileOn + (wrongWhileOn == 1 ? " wrong PIN attempt" : " wrong PIN attempts") + ", last at " + lastWrong.ToString("HH:mm") +
-                    ". Details: tray icon > Settings and activity.", ToolTipIcon.Warning);
+                    ". Details: open SleepGuard > Activity log.", ToolTipIcon.Warning);
             wrongTries = wrongWhileOn = 0;
+            window.RefreshAll(false);
         }
 
         // Runs on the hook thread, which must return quickly: hand the key to the UI thread.
@@ -270,11 +319,12 @@ namespace SleepGuard
             char before = Settings.HotkeyLetter;
             using (settingsOpen = new SettingsForm())
             {
-                settingsOpen.ShowDialog();
+                settingsOpen.ShowDialog(window.Visible ? window : null);
             }
             settingsOpen = null;
             if (Settings.HotkeyLetter != before) RegisterHotkey(true);
             UpdateTray();
+            window.RefreshAll(Guarding);
         }
 
         void RegisterHotkey(bool warn)
@@ -303,6 +353,8 @@ namespace SleepGuard
             blocker.Dispose();
             if (hotkey != null) hotkey.Dispose();
             prompt.Dispose();
+            window.AllowExit = true;
+            window.Close();
             tray.Visible = false;
             tray.Dispose();
             Activity.Add("SleepGuard exited");
@@ -342,18 +394,34 @@ namespace SleepGuard
 
     static class Program
     {
-        public const string Version = "1.1.0";
+        public const string Version = "1.2.0";
+        const string ShowEventName = @"Local\SleepGuard_Show";
 
+        [DllImport("user32.dll")] static extern bool AllowSetForegroundWindow(int processId);
+
+        public static EventWaitHandle ShowEvent;
+
+        // --tray: start hidden in the tray (used by "Start with Windows"). Otherwise the main window opens.
         [STAThread]
-        static void Main()
+        static void Main(string[] args)
         {
             bool first;
             using (var single = new Mutex(true, @"Local\SleepGuard_SingleInstance", out first))
             {
-                if (!first) return;
-                Application.EnableVisualStyles();
-                Application.SetCompatibleTextRenderingDefault(false);
-                Application.Run(new GuardApp());
+                if (!first)
+                {
+                    // Already running: bring that copy's window up instead of silently doing nothing.
+                    AllowSetForegroundWindow(-1 /* ASFW_ANY */);
+                    try { using (var ev = EventWaitHandle.OpenExisting(ShowEventName)) ev.Set(); }
+                    catch (WaitHandleCannotBeOpenedException) { }
+                    return;
+                }
+                using (ShowEvent = new EventWaitHandle(false, EventResetMode.AutoReset, ShowEventName))
+                {
+                    Application.EnableVisualStyles();
+                    Application.SetCompatibleTextRenderingDefault(false);
+                    Application.Run(new GuardApp(Array.IndexOf(args, "--tray") >= 0));
+                }
             }
         }
     }

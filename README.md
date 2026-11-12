@@ -8,7 +8,19 @@ SleepGuard keeps your video playing **on screen**, but blocks the keyboard and m
 It turns on by itself when you stop touching the laptop, or with a hotkey. Nothing covers the video: no lock
 screen, no overlay.
 
-![settings](docs/settings.png)
+<p align="center"><img src="docs/main.png" width="420" alt="SleepGuard main window"></p>
+
+## The app
+Open SleepGuard and its window shows:
+- **Status**: whether protection is on, and when it will turn on by itself.
+- **Protect now**: one click turns protection on and gets the window out of the way of your video.
+- **Turn on by itself** and **Sleep timer** as switches, with their minutes. Changes save at once.
+- **Last 24 hours**: how often it protected you, and any wrong PIN attempts with the time of the last one.
+- Links to **All settings**, the **Activity log** and **Change PIN**.
+
+Closing the window keeps SleepGuard running in the tray (the moon icon: grey = off, in colour = on). Click
+the moon, or simply open SleepGuard again, to bring the window back. With **Start with Windows** ticked it
+starts quietly in the tray.
 
 ## What happens
 1. You watch a video (YouTube, a film, anything).
@@ -26,7 +38,9 @@ screen, no overlay.
 turns off by itself when you unlock Windows.
 
 ## Settings
-Right-click the tray icon (the moon: grey = off, in colour = on) and choose **Settings and activity**.
+The everyday options are on the main window. **All settings** (also in the tray icon's menu) has everything:
+
+![settings](docs/settings.png)
 
 | Setting | Default |
 |---|---|
@@ -46,7 +60,8 @@ time.
 ## Install
 1. Download `SleepGuard-vX.Y.Z.zip` from [Releases](../../releases) and extract it anywhere.
 2. Run `SleepGuard.exe` and choose a PIN (at least 4 digits or letters; letters are not case-sensitive).
-3. It runs in the tray. Tick **Start with Windows** in Settings to keep it there.
+3. The main window opens. Tick **Start with Windows** in All settings to have it ready in the tray after
+   every start-up.
 
 No installer, no admin rights, no driver. Needs Windows 7-11 with .NET Framework 4.x (already part of Windows).
 Windows SmartScreen may warn because the program is not code-signed: **More info → Run anyway**.
@@ -75,7 +90,9 @@ Uses the C# compiler that ships with Windows. Output: `bin\SleepGuard.exe`.
 
 | File | Purpose |
 |---|---|
-| `src/GuardApp.cs` | Tray app, turning on/off, PIN entry, sleep timer, hotkey |
+| `src/GuardApp.cs` | Tray app, turning on/off, PIN entry, sleep timer, hotkey, single instance |
+| `src/MainWindow.cs` | The main window |
+| `src/Ui.cs` | Theme, cards, pill buttons and toggle switches |
 | `src/InputBlocker.cs` | The keyboard and mouse block |
 | `src/SettingsForm.cs` | Settings window and activity log view |
 | `src/PinSetup.cs` / `src/PinPrompt.cs` | Choosing the PIN / the box shown while someone types |

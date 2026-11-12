@@ -165,7 +165,7 @@ namespace SleepGuard
         static void SetStartup(bool on)
         {
             using (RegistryKey k = Registry.CurrentUser.CreateSubKey(RunKey))
-                if (on) k.SetValue(RunName, "\"" + Application.ExecutablePath + "\"");
+                if (on) k.SetValue(RunName, "\"" + Application.ExecutablePath + "\" --tray");   // start quietly in the tray
                 else k.DeleteValue(RunName, false);
         }
     }
